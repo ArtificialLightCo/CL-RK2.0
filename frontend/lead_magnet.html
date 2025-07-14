@@ -1,0 +1,32 @@
+<!-- frontend/lead_magnet.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Free Download | CLÆRK Lead Magnet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://unpkg.com/mvp.css@1.12.0">
+  <style>body { background: #f8fafc; } main { max-width: 540px; margin: 3em auto; }</style>
+</head>
+<body>
+  <main>
+    <h1>Free Productivity Guide</h1>
+    <p>Unlock instant focus and achieve your goals—download our top AI-powered planner template, free!</p>
+    <form onsubmit="return downloadLeadMagnet();">
+      <input type="email" id="lm-email" placeholder="Your Email" required style="width:90%;">
+      <button class="cta" type="submit">Get My Download</button>
+    </form>
+    <div id="dl-msg"></div>
+    <hr>
+    <h3>Why free?</h3>
+    <p>We believe in giving before asking. Try the planner—no credit card, no spam. If you love it, see our other tools!</p>
+    <script>
+      function downloadLeadMagnet() {
+        document.getElementById('dl-msg').innerHTML = 'Download ready! <a href="/downloads/planner.pdf" target="_blank">Click here</a>';
+        // (Optionally: POST email to backend for lead capture)
+        return false;
+      }
+    </script>
+  </main>
+</body>
+</html>
