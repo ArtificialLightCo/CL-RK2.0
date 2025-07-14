@@ -1,0 +1,117 @@
+# docker-compose.yml — CLÆRK 2.0
+
+version: "3.8"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    volumes:
+      - ./:/app
+      - ./products:/app/products
+    depends_on:
+      - redis
+      - llm_gateway
+      - psych_engine
+    ports:
+      - "8000:8000"
+
+  llm_gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: uvicorn llm_gateway:app --host 0.0.0.0 --port 9999
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    ports:
+      - "9999:9999"
+
+  psych_engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: uvicorn psych_engine:app --host 0.0.0.0 --port 8001
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    ports:
+      - "8001:8001"
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A scheduler worker --loglevel=INFO
+    env_file:
+      - .env
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  # Example bot containers (enable/disable as needed)
+  genesis_prime_bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python bots/genesis_prime.py
+    env_file:
+      - .env
+    depends_on:
+      - api
+      - redis
+
+  affiliate_marketing_bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python bots/affiliate_marketing_bot.py
+    env_file:
+      - .env
+    depends_on:
+      - api
+      - redis
+
+  discord_bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python bots/discord_bot.py
+    env_file:
+      - .env
+    depends_on:
+      - api
+      - redis
+
+  # Stable Diffusion (optional, for AI images)
+  # stable-diffusion:
+  #   image: ghcr.io/your/sd-image:latest
+  #   ports:
+  #     - "5000:5000"
+  #   env_file:
+  #     - .env
+
+  # NGINX reverse proxy (optional, for SSL/prod)
+  # nginx:
+  #   image: nginx:alpine
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   depends_on:
+  #     - api
+  #     - llm_gateway
+
+volumes:
+  products:
