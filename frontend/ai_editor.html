@@ -1,0 +1,76 @@
+<!-- frontend/ai_editor.html — CLÆRK AI Editor Panel -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CLÆRK AI Editor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://unpkg.com/mvp.css@1.12.0">
+  <style>
+    body { background: #f9fafb; }
+    main { max-width: 900px; margin: 3em auto; }
+    textarea { width: 100%; min-height: 180px; }
+    .diff { background: #f3f4f6; font-family: monospace; white-space: pre; overflow-x: auto; }
+    .result-split { display: flex; gap:2em; }
+    @media (max-width:900px) { .result-split { flex-direction: column; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>AI Editor</h1>
+  <form id="edit-form" onsubmit="return aiEdit();">
+    <label><b>Edit Instruction:</b></label>
+    <input type="text" id="editor-instr" placeholder="e.g., Rewrite for persuasion, fix accessibility, etc." required>
+    <label><b>Paste content to edit:</b></label>
+    <textarea id="editor-content" placeholder="Paste code, UI, product copy, config, etc."></textarea>
+    <label><b>Or upload a file:</b></label>
+    <input type="file" id="editor-file">
+    <button type="submit" class="cta">Edit with AI</button>
+  </form>
+  <div id="edit-result"></div>
+</main>
+<script>
+function aiEdit() {
+  let form = document.getElementById('edit-form');
+  let instr = document.getElementById('editor-instr').value;
+  let content = document.getElementById('editor-content').value;
+  let fileInput = document.getElementById('editor-file');
+  let data = new FormData();
+  data.append("instruction", instr);
+  if (fileInput.files.length) {
+    data.append("file", fileInput.files[0]);
+  } else {
+    data.append("content", content);
+    data.append("filename", "manual_paste.txt");
+  }
+  fetch("/ai_editor/", { method: "POST", body: data })
+    .then(r => r.json())
+    .then(res => {
+      document.getElementById('edit-result').innerHTML =
+        `<h3>AI Edited Result</h3>
+        <div class="result-split">
+          <div>
+            <b>Before:</b>
+            <textarea readonly>${res.before}</textarea>
+          </div>
+          <div>
+            <b>After:</b>
+            <textarea readonly>${res.after}</textarea>
+          </div>
+        </div>
+        <b>Diff:</b>
+        <div class="diff">${res.diff.replace(/</g,"&lt;")}</div>
+        <button onclick="copyToClipboard('after')">Copy 'After' Version</button>`;
+    });
+  return false;
+}
+function copyToClipboard(which) {
+  let txt = document.querySelector('textarea[readonly]');
+  if (which === 'after') txt = document.querySelectorAll('textarea[readonly]')[1];
+  txt.select();
+  document.execCommand("copy");
+  alert("Copied to clipboard!");
+}
+</script>
+</body>
+</html>
