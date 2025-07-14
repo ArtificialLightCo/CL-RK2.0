@@ -1,0 +1,19 @@
+<!-- Example in admin.html: -->
+<section id="analytics">
+  <h2>Live Analytics</h2>
+  <div id="live-analytics"></div>
+</section>
+<script>
+async function fetchAnalytics() {
+  let res = await fetch('/analytics/');
+  let data = await res.json();
+  document.getElementById('live-analytics').innerHTML =
+    `<ul>
+      <li>Total Sales: <b>${data.total_sales || 0}</b></li>
+      <li>Unique Visitors: <b>${data.unique_visitors || 0}</b></li>
+      <li>Products Generated: <b>${data.products_generated || 0}</b></li>
+      <li>Conversion Rate: <b>${(data.conversion_rate*100 || 0).toFixed(2)}%</b></li>
+    </ul>`;
+}
+setInterval(fetchAnalytics, 5000); fetchAnalytics();
+</script>
