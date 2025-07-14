@@ -220,3 +220,29 @@
   </script>
 </body>
 </html>
+
+
+<div id="support-chat" style="position:fixed;bottom:2em;right:2em;">
+  <button onclick="toggleChat()" class="cta">💬 Chat</button>
+  <div id="chatbox" style="display:none;background:#fff;border-radius:1em;box-shadow:0 2px 10px #aaa;padding:1em;width:340px;">
+    <div id="chat-messages" style="height:160px;overflow-y:auto;"></div>
+    <form onsubmit="return sendChat();"><input id="chat-input" style="width:80%"><button class="cta">Send</button></form>
+  </div>
+</div>
+<script>
+function toggleChat() {
+  let box = document.getElementById('chatbox');
+  box.style.display = (box.style.display==='none') ? 'block' : 'none';
+}
+async function sendChat() {
+  let input = document.getElementById('chat-input').value;
+  let div = document.getElementById('chat-messages');
+  div.innerHTML += "<div><b>You:</b> "+input+"</div>";
+  document.getElementById('chat-input').value = '';
+  let res = await fetch('/support_chat/', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:input})});
+  let reply = (await res.json()).reply;
+  div.innerHTML += "<div><b>CLÆRK:</b> "+reply+"</div>";
+  div.scrollTop = div.scrollHeight;
+  return false;
+}
+</script>
