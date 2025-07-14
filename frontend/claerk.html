@@ -1,0 +1,222 @@
+<!-- frontend/claerk.html — CLÆRK 2.0 Storefront & Assistant -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CLÆRK | AI-Powered Storefront</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://unpkg.com/mvp.css@1.12.0">
+  <style>
+    body { font-family: 'Inter', Arial, sans-serif; background: #f8fafc; }
+    .header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 0; }
+    .brand { font-size: 2rem; font-weight: 700; color: #111827; }
+    .cart { font-size: 1.1rem; position: relative; }
+    .cart-count { position: absolute; top: -0.5em; right: -0.8em; background: #e11d48; color: #fff; border-radius: 999px; padding: 0.25em 0.6em; font-size: 0.8rem;}
+    .cta { background: #e11d48; color: #fff; border: none; border-radius: 0.7em; font-weight: bold; padding: 0.6em 1.5em; cursor: pointer; }
+    .assistant-box { background: #fff7f5; border-radius: 1.2em; box-shadow: 0 2px 10px #e11d4820; margin: 2em 0; padding: 2em; }
+    .products { display: flex; flex-wrap: wrap; gap: 2em; }
+    .product-card { background: #fff; border-radius: 1.2em; box-shadow: 0 2px 12px #11182713; width: 320px; padding: 1.5em; position: relative;}
+    .upsell { background: #ffe0e0; border-radius: 0.8em; padding: 1em; margin-top: 0.8em; }
+    .testimonials { margin-top: 2em; }
+    .testimonial { background: #f1f5f9; padding: 1em; border-radius: 0.7em; margin-bottom: 1em; }
+    .activity-blurb { font-size: 0.9em; color: #4b5563; margin-top: 1em;}
+    @media (max-width: 768px) { .products { flex-direction: column; gap: 1em; } .product-card { width: 100%; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span class="brand">CLÆRK</span>
+    <div>
+      <span class="cart" id="cart">
+        🛒 <span class="cart-count" id="cart-count">0</span>
+      </span>
+      <button class="cta" onclick="showLogin()">Login</button>
+    </div>
+  </div>
+
+  <section class="assistant-box" aria-label="AI Product Generator">
+    <h2>Describe Your Dream Product</h2>
+    <form id="prompt-form" onsubmit="return submitPrompt();">
+      <input type="text" id="prompt-input" placeholder="e.g., 'Daily Focus Planner for ADHD'" required style="width: 80%; max-width: 420px;">
+      <button class="cta" type="submit">Generate</button>
+    </form>
+    <div id="prompt-result"></div>
+  </section>
+
+  <main>
+    <h2>Featured Products</h2>
+    <div class="products" id="products"></div>
+  </main>
+
+  <section class="testimonials" aria-label="Testimonials">
+    <h3>What Users Say</h3>
+    <div id="testimonial-list"></div>
+  </section>
+
+  <div class="activity-blurb" id="activity-blurb"></div>
+
+  <!-- Login Modal (hidden by default) -->
+  <div id="login-modal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:#11182780;z-index:9;">
+    <div style="background:#fff;padding:2em;border-radius:1em;max-width:350px;margin:8vh auto;">
+      <h3>Account Login</h3>
+      <form id="login-form" onsubmit="return doLogin();">
+        <input type="email" id="login-email" placeholder="Email" required>
+        <input type="password" id="login-pass" placeholder="Password" required>
+        <button class="cta" type="submit">Login</button>
+      </form>
+      <p>Or <a href="#" onclick="showRegister()">create an account</a></p>
+      <button onclick="hideLogin()" class="cta" style="background:#f3f4f6;color:#111;">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Cart Modal (hidden by default) -->
+  <div id="cart-modal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:#11182780;z-index:9;">
+    <div style="background:#fff;padding:2em;border-radius:1em;max-width:450px;margin:8vh auto;">
+      <h3>Your Cart</h3>
+      <ul id="cart-list"></ul>
+      <button class="cta" onclick="checkout()">Checkout</button>
+      <button onclick="hideCart()" class="cta" style="background:#f3f4f6;color:#111;">Close</button>
+    </div>
+  </div>
+
+  <script>
+    // --- AUTH (JWT cookie) ---
+    function setToken(token) {
+      document.cookie = "token=" + token + "; path=/";
+    }
+    function getToken() {
+      const match = document.cookie.match(/(^|;)\\s*token=([^;]+)/);
+      return match ? match[2] : null;
+    }
+
+    // --- Login/Register Modal Logic ---
+    function showLogin() { document.getElementById('login-modal').style.display = 'block'; }
+    function hideLogin() { document.getElementById('login-modal').style.display = 'none'; }
+    function showRegister() { alert("Register flow coming soon!"); }
+    function doLogin() {
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-pass').value;
+      fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.token) {
+          setToken(data.token);
+          hideLogin();
+          alert("Logged in!");
+        } else {
+          alert(data.detail || "Login failed.");
+        }
+      });
+      return false;
+    }
+
+    // --- Cart Modal Logic ---
+    let cart = [];
+    function updateCart() {
+      document.getElementById('cart-count').innerText = cart.length;
+      document.getElementById('cart-list').innerHTML =
+        cart.map((item, i) =>
+          `<li>${item.title} - $${item.price.toFixed(2)} <button onclick="removeCart(${i})">Remove</button></li>`
+        ).join('');
+    }
+    function showCart() { document.getElementById('cart-modal').style.display = 'block'; }
+    function hideCart() { document.getElementById('cart-modal').style.display = 'none'; }
+    function addCart(product) {
+      cart.push(product);
+      updateCart();
+      showCart();
+    }
+    function removeCart(i) {
+      cart.splice(i, 1);
+      updateCart();
+    }
+    document.getElementById('cart').onclick = showCart;
+
+    // --- Stripe Checkout ---
+    function checkout() {
+      if (!cart.length) return alert("Your cart is empty!");
+      const token = getToken();
+      if (!token) return showLogin();
+      // Here, you would collect all cart slugs and call /orders/checkout-session for each
+      alert("Proceeding to Stripe checkout (stub)...");
+      // Real implementation: POST to backend, then redirect to Stripe Checkout URL
+    }
+
+    // --- Product Fetch and Render ---
+    async function fetchProducts() {
+      let res = await fetch('/products/');
+      let prods = await res.json();
+      let html = prods.map((p, i) =>
+        `<div class="product-card">
+          <img src="${p.image || 'https://via.placeholder.com/400x200'}" style="width:100%;border-radius:0.8em;">
+          <h3>${p.title}</h3>
+          <div><strong>$${p.price.toFixed(2)}</strong></div>
+          <div>${p.description}</div>
+          <button class="cta" onclick='addCart(${JSON.stringify(p)})'>Add to Cart</button>
+          ${p.upsell ? `<div class="upsell"><b>Upsell:</b> ${p.upsell.title}<br>${p.upsell.description}</div>` : ''}
+        </div>`
+      ).join('');
+      document.getElementById('products').innerHTML = html;
+    }
+    fetchProducts();
+
+    // --- Prompt-to-Product Generation ---
+    async function submitPrompt() {
+      const prompt = document.getElementById('prompt-input').value;
+      const token = getToken();
+      if (!token) return showLogin();
+      document.getElementById('prompt-result').innerHTML = "⏳ Generating product...";
+      let res = await fetch('/api/generate_product', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': 'Bearer ' + token })
+        },
+        body: JSON.stringify({ prompt })
+      });
+      let data = await res.json();
+      if (data.product_copy) {
+        document.getElementById('prompt-result').innerHTML = `<div class="product-card">${data.product_copy}</div>`;
+      } else {
+        document.getElementById('prompt-result').innerHTML = "Error generating product.";
+      }
+      return false;
+    }
+
+    // --- Fetch Testimonials ---
+    async function fetchTestimonials() {
+      let res = await fetch('/products/'); // For now, fake: grab testimonials from products
+      let prods = await res.json();
+      let tlist = prods.map(p =>
+        `<div class="testimonial"><b>${p.title}</b><br>${p.testimonial || "Loved by users!"}</div>`
+      ).join('');
+      document.getElementById('testimonial-list').innerHTML = tlist;
+    }
+    fetchTestimonials();
+
+    // --- Real-Time Activity Blurb (stub) ---
+    function updateActivityBlurb() {
+      const blurbs = [
+        "Jane just bought a Focus Planner from NY!",
+        "2,103 entrepreneurs visited today.",
+        "Limited stock: Only 4 left of ADHD Pro Guide.",
+        "John generated a new habit checklist just now.",
+        "Latest testimonial: 'My mornings are totally different now!'"
+      ];
+      document.getElementById('activity-blurb').innerText = blurbs[Math.floor(Math.random()*blurbs.length)];
+    }
+    setInterval(updateActivityBlurb, 8000);
+    updateActivityBlurb();
+
+    // --- Accessibility (simple focus fix) ---
+    document.body.addEventListener('keydown', function(e) {
+      if (e.key === "Escape") { hideCart(); hideLogin(); }
+    });
+
+  </script>
+</body>
+</html>
