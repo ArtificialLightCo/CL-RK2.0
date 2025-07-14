@@ -1,0 +1,222 @@
+<!-- frontend/admin.html — CLÆRK Admin Dashboard -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CLÆRK Admin Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://unpkg.com/mvp.css@1.12.0">
+  <style>
+    body { background: #f3f4f6; }
+    .admin-header { display: flex; align-items: center; justify-content: space-between; margin: 1.5em 0; }
+    .admin-title { font-size: 2rem; font-weight: bold; }
+    .nav { display: flex; gap: 2em; }
+    .nav button { background: #e11d48; color: #fff; border: none; border-radius: 0.5em; padding: 0.6em 1.5em; cursor: pointer; }
+    .section { background: #fff; border-radius: 1em; box-shadow: 0 2px 12px #e11d4820; margin: 2em 0; padding: 2em; }
+    .table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+    .table th, .table td { padding: 0.7em 1em; border-bottom: 1px solid #f3f4f6; }
+    .bot-status-enabled { color: #16a34a; font-weight: bold; }
+    .bot-status-disabled { color: #e11d48; font-weight: bold; }
+    @media (max-width: 768px) { .nav { flex-direction: column; gap: 1em; } }
+  </style>
+</head>
+<body>
+  <div class="admin-header">
+    <span class="admin-title">CLÆRK Admin</span>
+    <div class="nav">
+      <button onclick="switchSection('products')">Products</button>
+      <button onclick="switchSection('orders')">Orders</button>
+      <button onclick="switchSection('users')">Users</button>
+      <button onclick="switchSection('testimonials')">Testimonials</button>
+      <button onclick="switchSection('bots')">Bots</button>
+      <button onclick="switchSection('analytics')">Analytics</button>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="section" id="products-section">
+    <h2>Products</h2>
+    <button onclick="fetchProducts()">Refresh</button>
+    <table class="table" id="products-table">
+      <thead><tr><th>Title</th><th>Price</th><th>Category</th><th>Created</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <button onclick="exportData('products')">Export CSV</button>
+  </div>
+
+  <div class="section" id="orders-section" style="display:none;">
+    <h2>Orders</h2>
+    <button onclick="fetchOrders()">Refresh</button>
+    <table class="table" id="orders-table">
+      <thead><tr><th>User</th><th>Product</th><th>Date</th><th>Session</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <button onclick="exportData('orders')">Export CSV</button>
+  </div>
+
+  <div class="section" id="users-section" style="display:none;">
+    <h2>Users</h2>
+    <button onclick="fetchUsers()">Refresh</button>
+    <table class="table" id="users-table">
+      <thead><tr><th>Email</th><th>Role</th><th>Created</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <button onclick="exportData('users')">Export CSV</button>
+  </div>
+
+  <div class="section" id="testimonials-section" style="display:none;">
+    <h2>Testimonials</h2>
+    <button onclick="fetchTestimonials()">Refresh</button>
+    <table class="table" id="testimonials-table">
+      <thead><tr><th>Product</th><th>Testimonial</th><th>User</th><th>Approved</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <button onclick="exportData('testimonials')">Export CSV</button>
+  </div>
+
+  <div class="section" id="bots-section" style="display:none;">
+    <h2>Bots</h2>
+    <button onclick="fetchBots()">Refresh</button>
+    <table class="table" id="bots-table">
+      <thead><tr><th>Name</th><th>Status</th><th>Description</th><th>Control</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <button onclick="exportData('bots')">Export CSV</button>
+  </div>
+
+  <div class="section" id="analytics-section" style="display:none;">
+    <h2>Analytics</h2>
+    <div id="analytics-panel"></div>
+    <button onclick="exportData('analytics')">Export CSV</button>
+  </div>
+
+  <script>
+    let currentSection = 'products';
+    function switchSection(section) {
+      document.querySelectorAll('.section').forEach(sec => sec.style.display = 'none');
+      document.getElementById(section + '-section').style.display = 'block';
+      currentSection = section;
+      // Optionally auto-refresh data
+      if(section === "products") fetchProducts();
+      if(section === "orders") fetchOrders();
+      if(section === "users") fetchUsers();
+      if(section === "testimonials") fetchTestimonials();
+      if(section === "bots") fetchBots();
+      if(section === "analytics") fetchAnalytics();
+    }
+
+    function logout() {
+      document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      window.location = "/";
+    }
+
+    // --- Products ---
+    async function fetchProducts() {
+      let res = await fetch('/products/');
+      let prods = await res.json();
+      let tbody = document.getElementById('products-table').querySelector('tbody');
+      tbody.innerHTML = prods.map(p =>
+        `<tr><td>${p.title}</td><td>$${p.price.toFixed(2)}</td><td>${p.category}</td><td>${p.created_at.split('T')[0]}</td>
+        <td><button onclick="deleteProduct('${p.slug}')">Delete</button></td></tr>`
+      ).join('');
+    }
+    async function deleteProduct(slug) {
+      if (!confirm("Delete this product?")) return;
+      await fetch('/products/' + slug, { method: 'DELETE' });
+      fetchProducts();
+    }
+
+    // --- Orders ---
+    async function fetchOrders() {
+      let res = await fetch('/orders/');
+      let orders = await res.json();
+      let tbody = document.getElementById('orders-table').querySelector('tbody');
+      tbody.innerHTML = orders.map(o =>
+        `<tr><td>${o.user_email}</td><td>${o.product_title}</td><td>${o.created_at.split('T')[0]}</td><td>${o.session_id || ''}</td></tr>`
+      ).join('');
+    }
+
+    // --- Users ---
+    async function fetchUsers() {
+      let res = await fetch('/users/');
+      let users = await res.json();
+      let tbody = document.getElementById('users-table').querySelector('tbody');
+      tbody.innerHTML = users.map(u =>
+        `<tr><td>${u.email}</td><td>${u.is_admin ? "Admin" : "User"}</td><td>${u.created_at.split('T')[0]}</td>
+        <td><button onclick="deleteUser('${u.email}')">Delete</button></td></tr>`
+      ).join('');
+    }
+    async function deleteUser(email) {
+      if (!confirm("Delete this user?")) return;
+      await fetch('/users/' + encodeURIComponent(email), { method: 'DELETE' });
+      fetchUsers();
+    }
+
+    // --- Testimonials ---
+    async function fetchTestimonials() {
+      let res = await fetch('/testimonials/');
+      let tests = await res.json();
+      let tbody = document.getElementById('testimonials-table').querySelector('tbody');
+      tbody.innerHTML = tests.map(t =>
+        `<tr><td>${t.product_title}</td><td>${t.text}</td><td>${t.user_email || ""}</td>
+        <td>${t.approved ? "✅" : "❌"}</td>
+        <td>
+          <button onclick="approveTestimonial('${t.id}')">Approve</button>
+          <button onclick="deleteTestimonial('${t.id}')">Delete</button>
+        </td></tr>`
+      ).join('');
+    }
+    async function approveTestimonial(id) {
+      await fetch('/testimonials/' + id + "/approve", { method: 'POST' });
+      fetchTestimonials();
+    }
+    async function deleteTestimonial(id) {
+      if (!confirm("Delete this testimonial?")) return;
+      await fetch('/testimonials/' + id, { method: 'DELETE' });
+      fetchTestimonials();
+    }
+
+    // --- Bots ---
+    async function fetchBots() {
+      let res = await fetch('/bots');
+      let bots = await res.json();
+      let tbody = document.getElementById('bots-table').querySelector('tbody');
+      tbody.innerHTML = bots.map(b =>
+        `<tr>
+          <td>${b.name}</td>
+          <td class="${b.enabled ? 'bot-status-enabled' : 'bot-status-disabled'}">${b.enabled ? 'ENABLED' : 'DISABLED'}</td>
+          <td>${b.description || ""}</td>
+          <td>
+            <button onclick="runBot('${b.name}')">Run Now</button>
+          </td>
+        </tr>`
+      ).join('');
+    }
+    async function runBot(name) {
+      await fetch('/run/' + name, { method: 'POST' });
+      alert("Bot triggered: " + name);
+    }
+
+    // --- Analytics (stub/example) ---
+    async function fetchAnalytics() {
+      let res = await fetch('/analytics/');
+      let data = await res.json();
+      document.getElementById('analytics-panel').innerHTML =
+        `<ul>
+          <li>Total Sales: <b>${data.total_sales || 0}</b></li>
+          <li>Unique Visitors: <b>${data.unique_visitors || 0}</b></li>
+          <li>Products Generated: <b>${data.products_generated || 0}</b></li>
+        </ul>`;
+    }
+
+    // --- Export to CSV/JSON (basic, for now) ---
+    function exportData(section) {
+      alert("Export for " + section + " coming soon (API endpoint or download).");
+    }
+
+    // --- Startup ---
+    fetchProducts();
+
+  </script>
+</body>
+</html>
