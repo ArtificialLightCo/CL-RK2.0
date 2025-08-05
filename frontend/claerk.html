@@ -1,248 +1,148 @@
-<!-- frontend/claerk.html — CLÆRK 2.0 Storefront & Assistant -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>CLÆRK | AI-Powered Storefront</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="https://unpkg.com/mvp.css@1.12.0">
+  <meta charset="UTF-8" />
+  <title>CLÆRK – AI-Powered Product Storefront</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    body { font-family: 'Inter', Arial, sans-serif; background: #f8fafc; }
-    .header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 0; }
-    .brand { font-size: 2rem; font-weight: 700; color: #111827; }
-    .cart { font-size: 1.1rem; position: relative; }
-    .cart-count { position: absolute; top: -0.5em; right: -0.8em; background: #e11d48; color: #fff; border-radius: 999px; padding: 0.25em 0.6em; font-size: 0.8rem;}
-    .cta { background: #e11d48; color: #fff; border: none; border-radius: 0.7em; font-weight: bold; padding: 0.6em 1.5em; cursor: pointer; }
-    .assistant-box { background: #fff7f5; border-radius: 1.2em; box-shadow: 0 2px 10px #e11d4820; margin: 2em 0; padding: 2em; }
-    .products { display: flex; flex-wrap: wrap; gap: 2em; }
-    .product-card { background: #fff; border-radius: 1.2em; box-shadow: 0 2px 12px #11182713; width: 320px; padding: 1.5em; position: relative;}
-    .upsell { background: #ffe0e0; border-radius: 0.8em; padding: 1em; margin-top: 0.8em; }
-    .testimonials { margin-top: 2em; }
+    body { font-family: 'Inter', Arial, sans-serif; background: #f8fafc; color: #222; margin: 0; padding: 0; }
+    header { padding: 2rem 1rem 1rem; text-align: center; background: #fff; box-shadow: 0 1px 8px #ececec; }
+    h1 { font-size: 2.5rem; letter-spacing: -1px; }
+    .desc { font-size: 1.2rem; color: #666; margin-bottom: 2rem; }
+    .gen-box { max-width: 480px; margin: 2rem auto; background: #fff; border-radius: 2rem; box-shadow: 0 4px 24px #e5e7eb; padding: 2rem; }
+    textarea { width: 100%; min-height: 120px; padding: 1rem; font-size: 1.1rem; border-radius: 12px; border: 1.5px solid #e5e7eb; margin-bottom: 1rem; }
+    button, .cta { width: 100%; background: linear-gradient(90deg, #eab308, #f59e42); color: #222; font-size: 1.2rem; border: none; border-radius: 12px; padding: 1rem; cursor: pointer; font-weight: bold; margin-bottom: 1em;}
+    .products { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; max-width: 1080px; margin: 2rem auto; }
+    .product-card { background: #fff8ee; border-radius: 1.5rem; box-shadow: 0 2px 16px #fae5bf; max-width: 420px; padding: 1.5rem; text-align: left; }
+    .product-title { font-size: 1.4rem; font-weight: bold; margin-bottom: 0.5rem; }
+    .product-desc { color: #444; margin-bottom: 1rem; }
+    .price { font-size: 1.2rem; color: #bf8000; font-weight: bold; margin-bottom: 1rem; }
+    .cta { display: inline-block; width: auto; }
+    .testimonials { background: #fff; border-radius: 2rem; box-shadow: 0 4px 24px #e5e7eb; max-width: 700px; margin: 2rem auto; padding: 2rem; }
     .testimonial { background: #f1f5f9; padding: 1em; border-radius: 0.7em; margin-bottom: 1em; }
-    .activity-blurb { font-size: 0.9em; color: #4b5563; margin-top: 1em;}
-    @media (max-width: 768px) { .products { flex-direction: column; gap: 1em; } .product-card { width: 100%; } }
+    .activity-blurb { font-size: 0.9em; color: #4b5563; margin-top: 1em; text-align:center;}
+    @media (max-width: 600px) { .gen-box, .product-card, .testimonials { padding: 1rem; } .products { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
-  <div class="header">
-    <span class="brand">CLÆRK</span>
-    <div>
-      <span class="cart" id="cart">
-        🛒 <span class="cart-count" id="cart-count">0</span>
-      </span>
-      <button class="cta" onclick="showLogin()">Login</button>
+  <header>
+    <h1>🤖 CLÆRK</h1>
+    <div class="desc">
+      Describe a goal or problem.<br />
+      Get a psychology-powered digital product. <b>Sell or use instantly.</b>
     </div>
+  </header>
+
+  <div class="gen-box">
+    <textarea id="prompt" placeholder="e.g. Help me wake up earlier and stick to a routine..."></textarea>
+    <button onclick="generateProduct()">Generate Product</button>
+    <div id="msg" style="margin-top:1rem; min-height: 1.5em;"></div>
   </div>
 
-  <section class="assistant-box" aria-label="AI Product Generator">
-    <h2>Describe Your Dream Product</h2>
-    <form id="prompt-form" onsubmit="return submitPrompt();">
-      <input type="text" id="prompt-input" placeholder="e.g., 'Daily Focus Planner for ADHD'" required style="width: 80%; max-width: 420px;">
-      <button class="cta" type="submit">Generate</button>
-    </form>
-    <div id="prompt-result"></div>
-  </section>
+  <div class="activity-blurb" id="activity-blurb"></div>
 
   <main>
-    <h2>Featured Products</h2>
+    <h2 style="text-align:center;">Featured Products</h2>
     <div class="products" id="products"></div>
   </main>
 
   <section class="testimonials" aria-label="Testimonials">
-    <h3>What Users Say</h3>
+    <h3 style="text-align:center;">What Users Say</h3>
     <div id="testimonial-list"></div>
   </section>
 
-  <div class="activity-blurb" id="activity-blurb"></div>
-
-  <!-- Login Modal (hidden by default) -->
-  <div id="login-modal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:#11182780;z-index:9;">
-    <div style="background:#fff;padding:2em;border-radius:1em;max-width:350px;margin:8vh auto;">
-      <h3>Account Login</h3>
-      <form id="login-form" onsubmit="return doLogin();">
-        <input type="email" id="login-email" placeholder="Email" required>
-        <input type="password" id="login-pass" placeholder="Password" required>
-        <button class="cta" type="submit">Login</button>
-      </form>
-      <p>Or <a href="#" onclick="showRegister()">create an account</a></p>
-      <button onclick="hideLogin()" class="cta" style="background:#f3f4f6;color:#111;">Cancel</button>
-    </div>
-  </div>
-
-  <!-- Cart Modal (hidden by default) -->
-  <div id="cart-modal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:#11182780;z-index:9;">
-    <div style="background:#fff;padding:2em;border-radius:1em;max-width:450px;margin:8vh auto;">
-      <h3>Your Cart</h3>
-      <ul id="cart-list"></ul>
-      <button class="cta" onclick="checkout()">Checkout</button>
-      <button onclick="hideCart()" class="cta" style="background:#f3f4f6;color:#111;">Close</button>
-    </div>
-  </div>
-
   <script>
-    // --- AUTH (JWT cookie) ---
-    function setToken(token) {
-      document.cookie = "token=" + token + "; path=/";
-    }
-    function getToken() {
-      const match = document.cookie.match(/(^|;)\\s*token=([^;]+)/);
-      return match ? match[2] : null;
-    }
+    // --- Elite Mock Product Data for DEMO ---
+    const products = [
+      {
+        title: "Focus Mastery Checklist",
+        description: "Unlock next-level focus with science-backed strategies for entrepreneurs and creatives.",
+        price: 19.99,
+        image: "https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?auto=format&fit=400x200",
+        slug: "focus-mastery-checklist",
+        testimonial: "This checklist doubled my daily output in a week. Worth every penny!",
+        isBestSeller: true,
+        limitedStock: 3,
+        authorityBadge: "Featured by Top Productivity Blogs"
+      },
+      {
+        title: "AI Habit Builder Planner",
+        description: "Personalized habit system that adapts to your goals. Includes daily trackers, motivational boosts, and reward triggers.",
+        price: 27.00,
+        image: "https://images.unsplash.com/photo-1453928582365-b6ad33cbcf64?auto=format&fit=400x200",
+        slug: "ai-habit-builder-planner",
+        testimonial: "My routines are finally automated. Nothing else worked until this!",
+        isBestSeller: false,
+        limitedStock: 5,
+        authorityBadge: "AI Expert Approved"
+      },
+      {
+        title: "Sleep Reset Guide",
+        description: "End insomnia with a proven, step-by-step guide. Sleep science, schedules, and hacks.",
+        price: 14.99,
+        image: "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=400x200",
+        slug: "sleep-reset-guide",
+        testimonial: "First real sleep in months. My life is different now.",
+        isBestSeller: true,
+        limitedStock: 2,
+        authorityBadge: "Trusted by 5,000+ Users"
+      }
+    ];
 
-    // --- Login/Register Modal Logic ---
-    function showLogin() { document.getElementById('login-modal').style.display = 'block'; }
-    function hideLogin() { document.getElementById('login-modal').style.display = 'none'; }
-    function showRegister() { alert("Register flow coming soon!"); }
-    function doLogin() {
-      const email = document.getElementById('login-email').value;
-      const password = document.getElementById('login-pass').value;
-      fetch('/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.token) {
-          setToken(data.token);
-          hideLogin();
-          alert("Logged in!");
-        } else {
-          alert(data.detail || "Login failed.");
-        }
-      });
-      return false;
-    }
-
-    // --- Cart Modal Logic ---
-    let cart = [];
-    function updateCart() {
-      document.getElementById('cart-count').innerText = cart.length;
-      document.getElementById('cart-list').innerHTML =
-        cart.map((item, i) =>
-          `<li>${item.title} - $${item.price.toFixed(2)} <button onclick="removeCart(${i})">Remove</button></li>`
-        ).join('');
-    }
-    function showCart() { document.getElementById('cart-modal').style.display = 'block'; }
-    function hideCart() { document.getElementById('cart-modal').style.display = 'none'; }
-    function addCart(product) {
-      cart.push(product);
-      updateCart();
-      showCart();
-    }
-    function removeCart(i) {
-      cart.splice(i, 1);
-      updateCart();
-    }
-    document.getElementById('cart').onclick = showCart;
-
-    // --- Stripe Checkout ---
-    function checkout() {
-      if (!cart.length) return alert("Your cart is empty!");
-      const token = getToken();
-      if (!token) return showLogin();
-      // Here, you would collect all cart slugs and call /orders/checkout-session for each
-      alert("Proceeding to Stripe checkout (stub)...");
-      // Real implementation: POST to backend, then redirect to Stripe Checkout URL
-    }
-
-    // --- Product Fetch and Render ---
-    async function fetchProducts() {
-      let res = await fetch('/products/');
-      let prods = await res.json();
-      let html = prods.map((p, i) =>
+    // --- Render Products ---
+    function renderProducts() {
+      document.getElementById('products').innerHTML = products.map(p =>
         `<div class="product-card">
-          <img src="${p.image || 'https://via.placeholder.com/400x200'}" style="width:100%;border-radius:0.8em;">
-          <h3>${p.title}</h3>
-          <div><strong>$${p.price.toFixed(2)}</strong></div>
-          <div>${p.description}</div>
-          <button class="cta" onclick='addCart(${JSON.stringify(p)})'>Add to Cart</button>
-          ${p.upsell ? `<div class="upsell"><b>Upsell:</b> ${p.upsell.title}<br>${p.upsell.description}</div>` : ''}
+          <img src="${p.image}" style="width:100%;border-radius:0.8em;">
+          <div class="product-title">${p.title} ${p.isBestSeller ? '<span style="color:#eab308;font-weight:bold;margin-left:0.5em;">Best Seller</span>' : ''}</div>
+          <div class="product-desc">${p.description}</div>
+          <div class="price">$${p.price} <span style="font-size:.9em;color:#999;">USD</span> ${p.limitedStock ? `<span style="background:#e11d48;color:#fff;border-radius:4px;padding:0 0.4em;margin-left:0.5em;">Only ${p.limitedStock} left</span>` : ''}</div>
+          <a class="cta" href="/store/${p.slug}">View & Buy</a>
+          <div style="margin-top:.5em;color:#818cf8;font-size:.95em;">⭐ ${p.authorityBadge || 'AI Verified'}</div>
         </div>`
       ).join('');
-      document.getElementById('products').innerHTML = html;
     }
-    fetchProducts();
+    renderProducts();
 
-    // --- Prompt-to-Product Generation ---
-    async function submitPrompt() {
-      const prompt = document.getElementById('prompt-input').value;
-      const token = getToken();
-      if (!token) return showLogin();
-      document.getElementById('prompt-result').innerHTML = "⏳ Generating product...";
-      let res = await fetch('/api/generate_product', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { 'Authorization': 'Bearer ' + token })
-        },
-        body: JSON.stringify({ prompt })
-      });
-      let data = await res.json();
-      if (data.product_copy) {
-        document.getElementById('prompt-result').innerHTML = `<div class="product-card">${data.product_copy}</div>`;
-      } else {
-        document.getElementById('prompt-result').innerHTML = "Error generating product.";
-      }
-      return false;
-    }
-
-    // --- Fetch Testimonials ---
-    async function fetchTestimonials() {
-      let res = await fetch('/products/'); // For now, fake: grab testimonials from products
-      let prods = await res.json();
-      let tlist = prods.map(p =>
-        `<div class="testimonial"><b>${p.title}</b><br>${p.testimonial || "Loved by users!"}</div>`
+    // --- Render Testimonials ---
+    function renderTestimonials() {
+      document.getElementById('testimonial-list').innerHTML = products.map(p =>
+        `<div class="testimonial">
+           <b>${p.title}</b><br>
+           "${p.testimonial}"<br>
+           <span style="color:#eab308;">★ ★ ★ ★ ★</span>
+         </div>`
       ).join('');
-      document.getElementById('testimonial-list').innerHTML = tlist;
     }
-    fetchTestimonials();
+    renderTestimonials();
 
-    // --- Real-Time Activity Blurb (stub) ---
+    // --- Activity Blurb (Rotating FOMO) ---
+    const blurbs = [
+      "🔥 8 people bought a Focus Mastery Checklist in the last hour!",
+      "Just updated: Only 2 Sleep Reset Guides left!",
+      "New testimonial: 'This checklist doubled my daily output!'",
+      "⭐ Featured by Top Productivity Blogs.",
+      "5,000+ users trust CLÆRK for digital growth.",
+      "Jane just unlocked a bonus offer!",
+    ];
     function updateActivityBlurb() {
-      const blurbs = [
-        "Jane just bought a Focus Planner from NY!",
-        "2,103 entrepreneurs visited today.",
-        "Limited stock: Only 4 left of ADHD Pro Guide.",
-        "John generated a new habit checklist just now.",
-        "Latest testimonial: 'My mornings are totally different now!'"
-      ];
       document.getElementById('activity-blurb').innerText = blurbs[Math.floor(Math.random()*blurbs.length)];
     }
-    setInterval(updateActivityBlurb, 8000);
+    setInterval(updateActivityBlurb, 6000);
     updateActivityBlurb();
 
-    // --- Accessibility (simple focus fix) ---
-    document.body.addEventListener('keydown', function(e) {
-      if (e.key === "Escape") { hideCart(); hideLogin(); }
-    });
-
+    // --- Fake Product Generator Demo ---
+    function generateProduct() {
+      const prompt = document.getElementById('prompt').value.trim();
+      const msg = document.getElementById('msg');
+      if (!prompt) { msg.style.color="red"; msg.innerText="Type your dream product above!"; return; }
+      msg.style.color = "#666";
+      msg.textContent = "⏳ Generating your product...";
+      setTimeout(() => {
+        msg.innerHTML = `<b>Your personalized product:</b> <br><span style="color:#eab308">"Custom ${prompt}"</span><br>
+          <span style="font-size:1em;">We'll deliver it to your dashboard soon.</span>`;
+      }, 1400);
+    }
   </script>
 </body>
 </html>
-
-
-<div id="support-chat" style="position:fixed;bottom:2em;right:2em;">
-  <button onclick="toggleChat()" class="cta">💬 Chat</button>
-  <div id="chatbox" style="display:none;background:#fff;border-radius:1em;box-shadow:0 2px 10px #aaa;padding:1em;width:340px;">
-    <div id="chat-messages" style="height:160px;overflow-y:auto;"></div>
-    <form onsubmit="return sendChat();"><input id="chat-input" style="width:80%"><button class="cta">Send</button></form>
-  </div>
-</div>
-<script>
-function toggleChat() {
-  let box = document.getElementById('chatbox');
-  box.style.display = (box.style.display==='none') ? 'block' : 'none';
-}
-async function sendChat() {
-  let input = document.getElementById('chat-input').value;
-  let div = document.getElementById('chat-messages');
-  div.innerHTML += "<div><b>You:</b> "+input+"</div>";
-  document.getElementById('chat-input').value = '';
-  let res = await fetch('/support_chat/', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:input})});
-  let reply = (await res.json()).reply;
-  div.innerHTML += "<div><b>CLÆRK:</b> "+reply+"</div>";
-  div.scrollTop = div.scrollHeight;
-  return false;
-}
-</script>
